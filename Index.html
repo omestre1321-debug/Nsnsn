@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Controlo do Carrinho micro:bit</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
+        button { font-size: 20px; padding: 15px 30px; margin: 10px; cursor: pointer; border-radius: 10px; border: none; background-color: #007bff; color: white; }
+        button:hover { background-color: #0056b3; }
+        #connectBtn { background-color: #28a745; }
+        #connectBtn:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+    <h1>Controlo Remoto Robotbit</h1>
+    <button id="connectBtn" onclick="conectarBluetooth()">Conectar micro:bit</button>
+    <br><br>
+
+    <div>
+        <button onclick="enviarComando('FRENTE')">⬆️ FRENTE</button><br>
+        <button onclick="enviarComando('ESQUERDA')">⬅️ ESQUERDA</button>
+        <button onclick="enviarComando('PARADO')">⏹️ PARAR</button>
+        <button onclick="enviarComando('DIREITA')">➡️ DIREITA</button><br>
+        <button onclick="enviarComando('TRAS')">⬇️ TRÁS</button>
+    </div>
+
+    <script>
+        let bluetoothDevice;
+        let uartCharacteristic;
+
+        // UUID padrão do serviço UART do micro:bit
+        const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const UART_TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+        async function conectarBluetooth() {
+            try {
+                console.log('A procurar pelo micro:bit...');
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'BBC micro:bit' }],
+                    optionalServices: [UART_SERVICE_UUID]
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService(UART_SERVICE_UUID);
+                uartCharacteristic = await service.getCharacteristic(UART_TX_CHAR_UUID);
+
+                alert('Conectado com sucesso ao micro:bit!');
+                document.getElementById('connectBtn').innerText = 'Conectado ✅';
+            } catch (error) {
+                console.log('Erro ao conectar: ', error);
+                alert('Falha na conexão Bluetooth.');
+            }
+        }
+
+        async function enviarComando(comando) {
+            if (!uartCharacteristic) {
+                alert('Conecte o micro:bit primeiro!');
+                return;
+            }
+            try {
+                // Envia a string com quebra de linha no final
+                const encoder = new TextEncoder();
+                const dados = encoder.encode(comando + '\n');
+                await uartCharacteristic.writeValue(dados);
+                console.log('Comando enviado: ' + comando);
+            } catch (error) {
+                console.log('Erro ao enviar comando: ', error);
+            }
+        }
+    </script>
+</body>
+</html>
